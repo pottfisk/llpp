@@ -33,7 +33,7 @@ int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
 	int i = 1;
 	QString scenefile = "scenario.xml";
-
+	Ped::IMPLEMENTATION impl = Ped::SEQ;
 	// Argument handling
 	while (i < argc)
 	{
@@ -49,6 +49,20 @@ int main(int argc, char*argv[]) {
 				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [scenario]" << endl;
 				return 0;
 			}
+			else if (strcmp(&argv[i][2], "omp") == 0)
+			  {
+			    impl = Ped::OMP;
+			  }
+			
+			else if (strcmp(&argv[i][2], "seq") == 0)
+			  {
+			    impl = Ped::SEQ;
+			  }
+
+			else if (strcmp(&argv[i][2], "pthread") == 0)
+			  {
+			    impl = Ped::PTHREAD;
+			  }
 			else
 			{
 				cerr << "Unrecognized command: \"" << argv[i] << "\". Ignoring ..." << endl;
@@ -67,7 +81,7 @@ int main(int argc, char*argv[]) {
 		// Reading the scenario file and setting up the crowd simulation model
 		Ped::Model model;
 		ParseScenario parser(scenefile);
-		model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+		model.setup(parser.getAgents(), parser.getWaypoints(), impl);
 
 		// GUI related set ups
 		QApplication app(argc, argv);
@@ -102,7 +116,7 @@ int main(int argc, char*argv[]) {
 
 			// Change this variable when testing different versions of your code. 
 			// May need modification or extension in later assignments depending on your implementations
-			Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
+			Ped::IMPLEMENTATION implementation_to_test = impl;
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);

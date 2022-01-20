@@ -1,3 +1,4 @@
+
 //
 // pedsim - A microscopic pedestrian simulation system.
 // Copyright (c) 2003 - 2014 by Christian Gloor
@@ -21,13 +22,11 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 {
 	// Convenience test: does CUDA work on this machine?
 	cuda_test();
-
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
-
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
 
@@ -35,9 +34,53 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	setupHeatmapSeq();
 }
 
+void Ped::Model::thread_func(int val, int work){
+  for(int i = 0; i < work; i++){
+    int index = val + i;
+    agents[index]->computeNextDesiredPosition();
+    agents[index]->setX(agents[index]->getDesiredX());
+    agents[index]->setY(agents[index]->getDesiredY());
+  }
+}
+
+
 void Ped::Model::tick()
 {
-	// EDIT HERE FOR ASSIGNMENT 1
+  if(this->implementation == Ped::SEQ){
+      for (auto agent: agents){
+	agent->computeNextDesiredPosition();
+	agent->setX(agent->getDesiredX());
+	agent->setY(agent->getDesiredY());
+      }
+    }
+  else if(this->implementation == Ped::OMP){
+    int i;
+#pragma omp parallel for private(i)
+    for (i = 0; i < agents.size(); i++){
+      agents[i]->computeNextDesiredPosition();
+      agents[i]->setX(agents[i]->getDesiredX());
+      agents[i]->setY(agents[i]->getDesiredY());
+    } 
+  }
+  else if(this->implementation == Ped::PTHREAD){
+  
+     int num_threads = omp_get_max_threads();
+     if(num_threads > agents.size()){
+       num_threads = agents.size();
+     }
+     std::thread threads[num_threads];
+     int num_agents = agents.size();
+     int work = num_agents / num_threads;
+     int remainder = num_agents % num_threads;
+     for(int i = 0; i < num_threads && num_agents; i++){
+       int index = i * work;
+       threads[i] = std::thread(&Ped::Model::thread_func,this, index, work);
+     }
+     thread_func(num_agents-remainder,remainder);
+     for(int i = 0; i < num_threads; i++){
+       threads[i].join();
+     }
+   }
 }
 
 ////////////
