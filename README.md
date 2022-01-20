@@ -69,3 +69,5 @@ to the UPPMAX node with an X session.
 On Mac/Linux, on your terminal, add the `-Y` argument in your `ssh` command.
 On Windows, start your X-server application (e.g. Xming), and configure
 enabling X11 in your PuTTY configuration.
+# llpp
+LLPP repo grupp 12
