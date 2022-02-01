@@ -17,16 +17,18 @@
 #include <thread>
 #include <emmintrin.h>
 #include <stdlib.h>
-
+#include <math.h>
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
 	cuda_test();
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
+	std::cout << "agents: " <<agents.size();
+	int size = agents.size();
 
-	X = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
-	Y = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
+	X = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
+	Y = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
 	int i = 0;
 	for(auto agent : agents) {
 		X[i] = agent->getX();
@@ -35,9 +37,10 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	}
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
-	destX = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
-	destY = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
-	destR = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
+	int destSize = destinations.size();
+	destX = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
+	destY = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
+	destR = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
 	int j = 0;
 	for(auto dest : destinations) {
 		destX[j] = dest->getx();
@@ -104,12 +107,31 @@ void Ped::Model::tick()
      }
    }
    else if(this->implementation == Ped::VECTOR){
-	   __m128 X,Y,D;
-	   for (int i = 0; i < agents.size(); i+4)
+	   __m128 Xd,Yd, Xs,Ys, len;
+	   for (int i = 0; i < agents.size(); i+=4)
 	   {
-		   X = _mm_load_ps(&X[i]);
+		   	Xs = _mm_load_ps(&X[i]);
+		   	Ys = _mm_load_ps(&Y[i]);
+			Xd = _mm_load_ps(&destX[i]);
+			Yd = _mm_load_ps(&destY[i]);
+			Xd = _mm_sub_ps(Xd, Xs);
+			Yd = _mm_sub_ps(Yd, Ys);
+			Xd = _mm_mul_ps(Xd, Xd);
+			Yd = _mm_mul_ps(Yd, Yd);
+			len = _mm_sqrt_ps(Xd + Yd);
+			Xd = _mm_div_ps(Xd,len);
+			Yd = _mm_div_ps(Yd,len);
+			Xd = _mm_add_ps(Xd,Xs);
+			Yd = _mm_add_ps(Yd,Ys);
+			_mm_store_ps(&X[i], Xd);
+			_mm_store_ps(&Y[i], Yd);
 	   }
-	   
+	   int j = 0;
+	   for (auto agent : agents){
+		   agent->setX((int)round(X[j]));
+		   agent->setY((int)round(Y[j]));
+		   j++;
+	   }
    }
 }
 
