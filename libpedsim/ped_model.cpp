@@ -25,17 +25,30 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
-	int *x; int *y;
-	x = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
-	y = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
+	X = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
+	Y = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
 	int i = 0;
 	for(auto agent : agents) {
-		x[i] = agent->getX();
-		y[i] = agent->getY();
+		X[i] = agent->getX();
+		Y[i] = agent->getY();
 		i++;
 	}
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
+	destX = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
+	destY = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
+	destR = (double *)_mm_malloc(destinations.size() * sizeof(double),16);
+	int j = 0;
+	for(auto dest : destinations) {
+		destX[j] = dest->getx();
+		destY[j] = dest->gety();
+		destR[j] = dest->getr();
+		j++;
+		
+	}
+
+
+
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
 
@@ -91,9 +104,10 @@ void Ped::Model::tick()
      }
    }
    else if(this->implementation == Ped::VECTOR){
+	   __m128 X,Y,D;
 	   for (int i = 0; i < agents.size(); i+4)
 	   {
-		   /* code */
+		   X = _mm_load_ps(&X[i]);
 	   }
 	   
    }
