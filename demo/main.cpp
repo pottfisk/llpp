@@ -63,6 +63,10 @@ int main(int argc, char*argv[]) {
 			  {
 			    impl = Ped::PTHREAD;
 			  }
+			else if (strcmp(&argv[i][2], "vector") == 0)
+			  {
+			    impl = Ped::VECTOR;
+			  }
 			else
 			{
 				cerr << "Unrecognized command: \"" << argv[i] << "\". Ignoring ..." << endl;

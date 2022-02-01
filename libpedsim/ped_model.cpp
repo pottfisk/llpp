@@ -15,7 +15,7 @@
 #include "cuda_testkernel.h"
 #include <omp.h>
 #include <thread>
-
+#include <emmintrin.h>
 #include <stdlib.h>
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
@@ -25,6 +25,15 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
+	int *x; int *y;
+	x = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
+	y = (int *) _mm_malloc(agents.size() * sizeof(int), 16);
+	int i = 0;
+	for(auto agent : agents) {
+		x[i] = agent->getX();
+		y[i] = agent->getY();
+		i++;
+	}
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 	// Sets the chosen implemenation. Standard in the given code is SEQ
@@ -64,7 +73,7 @@ void Ped::Model::tick()
   }
   else if(this->implementation == Ped::PTHREAD){
   
-     int num_threads = omp_get_max_threads();
+     int num_threads = 1;
      if(num_threads > agents.size()){
        num_threads = agents.size();
      }
@@ -80,6 +89,13 @@ void Ped::Model::tick()
      for(int i = 0; i < num_threads; i++){
        threads[i].join();
      }
+   }
+   else if(this->implementation == Ped::VECTOR){
+	   for (int i = 0; i < agents.size(); i+4)
+	   {
+		   /* code */
+	   }
+	   
    }
 }
 

@@ -24,6 +24,7 @@ using namespace std;
 namespace Ped {
 	class Twaypoint;
 
+
 	class Tagent {
 	public:
 		Tagent(int posX, int posY);
@@ -70,6 +71,7 @@ namespace Ped {
 
 		// Internal init function 
 		void init(int posX, int posY);
+
 
 		// Returns the next destination to visit
 		Twaypoint* getNextDestination();
