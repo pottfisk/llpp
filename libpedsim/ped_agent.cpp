@@ -37,8 +37,8 @@ void Ped::Tagent::computeNextDesiredPosition() {
 	double diffX = destination->getx() - x;
 	double diffY = destination->gety() - y;
 	double len = sqrt(diffX * diffX + diffY * diffY);
-	desiredPositionX = (int)round(x + diffX / len);
-	desiredPositionY = (int)round(y + diffY / len);
+	desiredPositionX = (int)round(x + (diffX / len));
+	desiredPositionY = (int)round(y + (diffY / len));
 }
 
 void Ped::Tagent::addWaypoint(Twaypoint* wp) {
