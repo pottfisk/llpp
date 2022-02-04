@@ -18,6 +18,11 @@
 #include <emmintrin.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdint.h>
+#include <string.h>
+#include <algorithm>
+#include <iterator>
+#include <smmintrin.h>
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
@@ -31,21 +36,22 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	Y = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
 	int i = 0;
 	for(auto agent : agents) {
-		X[i] = agent->getX();
-		Y[i] = agent->getY();
+		X[i] = (float)agent->getX();
+		//cout<<"start in arr: " <<X[i];
+		Y[i] = (float)agent->getY();
 		i++;
 	}
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 	int destSize = destinations.size();
-	destX = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
-	destY = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
-	destR = (float *)_mm_malloc((destSize + destSize % 4) * sizeof(float),16);
+	destX = (float *)_mm_malloc((size+4 + size % 4) * sizeof(float),16);
+	destY = (float *)_mm_malloc((size+4 + size % 4) * sizeof(float),16);
+	destR = (float *)_mm_malloc((size+4 + size % 4) * sizeof(float),16);
 	int j = 0;
-	for(auto dest : destinations) {
-		destX[j] = dest->getx();
-		destY[j] = dest->gety();
-		destR[j] = dest->getr();
+	for(int i = 0; i < size+4; i++) {
+		destX[i] = (float)destinations[i%destSize]->getx();
+		destY[i] = (float)destinations[i%destSize]->gety();
+		destR[i] = (float)destinations[i%destSize]->getr();
 		j++;
 		
 	}
@@ -66,6 +72,14 @@ void Ped::Model::thread_func(int val, int work){
     agents[index]->setX(agents[index]->getDesiredX());
     agents[index]->setY(agents[index]->getDesiredY());
   }
+}
+
+void print128_num(__m128 var)
+{
+    float val[4];
+    memcpy(val, &var, sizeof(val));
+    printf("Numerical: %f %f %f %f \n", 
+           val[0], val[1], val[2], val[3]);
 }
 
 
@@ -107,33 +121,63 @@ void Ped::Model::tick()
      }
    }
    else if(this->implementation == Ped::VECTOR){
-	   __m128 Xd,Yd, Xs,Ys, len;
+	   __m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
+	   __m128 zeros = _mm_setzero_ps();
+	   __m128 ones = _mm_set1_ps(1);
 	   for (int i = 0; i < agents.size(); i+=4)
 	   {
 		   	Xs = _mm_load_ps(&X[i]);
 		   	Ys = _mm_load_ps(&Y[i]);
-			Xd = _mm_load_ps(&destX[i]);
-			Yd = _mm_load_ps(&destY[i]);
-			Xd = _mm_sub_ps(Xd, Xs);
-			Yd = _mm_sub_ps(Yd, Ys);
+			Xds = _mm_load_ps(&destX[i]);
+			Yds = _mm_load_ps(&destY[i]);
+			Rd = _mm_load_ps(&destR[i]);
+				
+			Xd = _mm_sub_ps(Xds, Xs);
+			Yd = _mm_sub_ps(Yds, Ys);
+			
 			Xd = _mm_mul_ps(Xd, Xd);
 			Yd = _mm_mul_ps(Yd, Yd);
-			len = _mm_sqrt_ps(Xd + Yd);
+			
+			len = _mm_sqrt_ps(_mm_add_ps(Xd,Yd));
+	
+			
+			// If mask==1 len < rad
+			mask_rad = _mm_cmplt_ps(len,Rd);
+			mask_zero = _mm_cmpeq_ps(len,zeros);
+			
+			corr = _mm_blendv_ps(zeros,ones,mask_zero);
+			len = _mm_add_ps(len,corr);
+
 			Xd = _mm_div_ps(Xd,len);
 			Yd = _mm_div_ps(Yd,len);
 			Xd = _mm_add_ps(Xd,Xs);
 			Yd = _mm_add_ps(Yd,Ys);
-			_mm_store_ps(&X[i], Xd);
-			_mm_store_ps(&Y[i], Yd);
+			
+			
+							//mask!=1,mask==1,mask		
+			Xn = _mm_blendv_ps(Xd,Xs,mask_rad);
+			Yn = _mm_blendv_ps(Yd,Ys,mask_rad);
+
+			_mm_store_ps(&X[i], Xn);
+			_mm_store_ps(&Y[i], Yn);
+			Xnd = _mm_loadu_ps(&destX[i+1]);	
+			Ynd = _mm_loadu_ps(&destY[i+1]);	
+			Xn = _mm_blendv_ps(Xds,Xnd,mask_rad);
+			Yn = _mm_blendv_ps(Yds,Ynd,mask_rad);
+			_mm_store_ps(&destX[i], Xn);
+			_mm_store_ps(&destY[i], Yn);
 	   }
-	   int j = 0;
+	   int j = 0; 
 	   for (auto agent : agents){
 		   agent->setX((int)round(X[j]));
 		   agent->setY((int)round(Y[j]));
+		   //cout<<X[j];
 		   j++;
 	   }
    }
 }
+
+
 
 ////////////
 /// Everything below here relevant for Assignment 3.
