@@ -28,6 +28,7 @@ void Ped::Tagent::init(int posX, int posY) {
 
 void Ped::Tagent::computeNextDesiredPosition() {
 	destination = getNextDestination();
+	
 	if (destination == NULL) {
 		// no destination, no need to
 		// compute where to move to

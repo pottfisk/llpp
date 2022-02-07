@@ -34,29 +34,34 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	X = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
 	Y = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
+	
 	int i = 0;
 	for(auto agent : agents) {
 		X[i] = (float)agent->getX();
-		//cout<<"start in arr: " <<X[i];
 		Y[i] = (float)agent->getY();
+		agent->destination = agent->waypoints.front();
+		agent->waypoints.pop_front();
 		i++;
 	}
+	
 	// Set up destinations
+	
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 	int destSize = destinations.size();
-	destX = (float *)_mm_malloc((size+5 + size % 4) * sizeof(float),16);
-	destY = (float *)_mm_malloc((size+5 + size % 4) * sizeof(float),16);
-	destR = (float *)_mm_malloc((size+5 + size % 4) * sizeof(float),16);
-	int j = 0;
-	for(int i = 0; i < size+5; i++) {
-		destX[i] = (float)destinations[i%destSize]->getx();
-		destY[i] = (float)destinations[i%destSize]->gety();
-		destR[i] = (float)destinations[i%destSize]->getr();
-		j++;
+	
+	destX = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
+	destY = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
+	destR = (float *)_mm_malloc((size + size % 4) * sizeof(float),16);
+	destXNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
+	destYNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);	
+	destRNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
+	
+	for(int i = 0; i < (size + size % 4); i++) {
+		destXNext[i] = destX[i] = (float)destinations[i%destSize]->getx();
+		destYNext[i] = destY[i] = (float)destinations[i%destSize]->gety(); 
+		destRNext[i] = destR[i] = (float)destinations[i%destSize]->getr();
 		
 	}
-
-
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
@@ -81,7 +86,6 @@ void print128_num(__m128 var)
     printf("Numerical: %f %f %f %f \n", 
            val[0], val[1], val[2], val[3]);
 }
-
 
 void Ped::Model::tick()
 {
@@ -124,8 +128,10 @@ void Ped::Model::tick()
 	   __m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
 	   __m128 zeros = _mm_setzero_ps();
 	   __m128 ones = _mm_set1_ps(1);
+
 	   for (int i = 0; i < agents.size(); i+=4)
-	   {
+	   {	
+
 		   	Xs = _mm_load_ps(&X[i]);
 		   	Ys = _mm_load_ps(&Y[i]);
 			Xds = _mm_load_ps(&destX[i]);
@@ -139,6 +145,9 @@ void Ped::Model::tick()
 			len = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(Xd, Xd),_mm_mul_ps(Yd, Yd)));
 			// If mask==1 len < rad
 			mask_rad = _mm_cmplt_ps(len,Rd);
+			//cout << "-----------\n";
+			//print128_num(mask_rad);
+			//print128_num(len);			
 			mask_zero = _mm_cmpeq_ps(len,zeros);
 			corr = _mm_blendv_ps(zeros,ones,mask_zero);
 			len = _mm_add_ps(len,corr);
@@ -148,26 +157,39 @@ void Ped::Model::tick()
 			Xd = _mm_add_ps(Xd,Xs);
 			Yd = _mm_add_ps(Yd,Ys);
 			
-		    							//mask!=1,mask==1,mask		
+		    							//mask!=1,mask==1,mask	
+				
 			Xn = _mm_blendv_ps(Xd,Xs,mask_rad);
 			Yn = _mm_blendv_ps(Yd,Ys,mask_rad);
 			_mm_store_ps(&X[i], Xn);
 			_mm_store_ps(&Y[i], Yn);
+			
 
-			Xnd = _mm_loadu_ps(&destX[i+1]);	
-			Ynd = _mm_loadu_ps(&destY[i+1]);	
+			Xnd = _mm_load_ps(&destXNext[i]);	
+			Ynd = _mm_load_ps(&destYNext[i]);
+			//print128_num(Xds);
+			//print128_num(Xnd);
 			Xn = _mm_blendv_ps(Xds,Xnd,mask_rad);
 			Yn = _mm_blendv_ps(Yds,Ynd,mask_rad);
 			
 			_mm_store_ps(&destX[i], Xn);
 			_mm_store_ps(&destY[i], Yn);
+			
 	   }
 	   int j = 0; 
 	   for (auto agent : agents){
 		   agent->setX((int)round(X[j]));
-		   //cout << "new pos: "<<X[j]<<"\n";
 		   agent->setY((int)round(Y[j]));
-		   //cout<<X[j];
+		   if(destX[j] == destXNext[j] && destY[j] == destYNext[j]){
+			Twaypoint *dest = agent->destination;
+			agent->waypoints.push_back(dest);
+			agent->destination = dest = agent->waypoints.front();
+			agent->waypoints.pop_front();
+			//cout << "dest :" << dest->getx() << "\n";
+			destYNext[j] = dest->gety();
+			destXNext[j] = dest->getx();
+			destRNext[j] = dest->getr();			
+		   }
 		   j++;
 	   }
    }

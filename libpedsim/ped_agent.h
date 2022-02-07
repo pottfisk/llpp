@@ -48,6 +48,12 @@ namespace Ped {
 
 		// Adds a new waypoint to reach for this agent
 		void addWaypoint(Twaypoint* wp);
+	
+		// The queue of all destinations that this agent still has to visit
+		deque<Twaypoint*> waypoints;
+	
+		// The current destination (may require several steps to reach)
+		Twaypoint* destination;
 
 	private:
 		Tagent() {};
@@ -60,15 +66,11 @@ namespace Ped {
 		int desiredPositionX;
 		int desiredPositionY;
 
-		// The current destination (may require several steps to reach)
-		Twaypoint* destination;
-
+	
 		// The last destination
 		Twaypoint* lastDestination;
 
-		// The queue of all destinations that this agent still has to visit
-		deque<Twaypoint*> waypoints;
-
+	
 		// Internal init function 
 		void init(int posX, int posY);
 

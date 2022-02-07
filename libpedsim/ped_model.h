@@ -62,6 +62,9 @@ namespace Ped{
 		float *destX;
 		float *destY;
 		float *destR;
+		float *destXNext;
+		float *destYNext;
+		float *destRNext;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
