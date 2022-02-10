@@ -55,11 +55,17 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	destXNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
 	destYNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);	
 	destRNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
-	
+	int j = 0;
+		
 	for(int i = 0; i < (size + size % 4); i++) {
-		destXNext[i] = destX[i] = (float)destinations[i%destSize]->getx();
-		destYNext[i] = destY[i] = (float)destinations[i%destSize]->gety(); 
-		destRNext[i] = destR[i] = (float)destinations[i%destSize]->getr();
+		destX[i] = (float)destinations[i%destSize]->getx();
+		destXNext[i] = agents[i]->destination->getx();
+		destY[i] = (float)destinations[i%destSize]->gety();
+		destYNext[i] = agents[i]->destination->gety();
+		
+		destR[i] = (float)destinations[i%destSize]->getr();
+		destRNext[i] = agents[i]->destination->getr();
+		j++;
 		
 	}
 
@@ -161,6 +167,9 @@ void Ped::Model::tick()
 				
 			Xn = _mm_blendv_ps(Xd,Xs,mask_rad);
 			Yn = _mm_blendv_ps(Yd,Ys,mask_rad);
+
+			Xn = _mm_round_ps(Xn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+			Yn = _mm_round_ps(Yn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
 			_mm_store_ps(&X[i], Xn);
 			_mm_store_ps(&Y[i], Yn);
 			
@@ -189,7 +198,7 @@ void Ped::Model::tick()
 			destYNext[j] = dest->gety();
 			destXNext[j] = dest->getx();
 			destRNext[j] = dest->getr();			
-		   }
+	   		}
 		   j++;
 	   }
    }
