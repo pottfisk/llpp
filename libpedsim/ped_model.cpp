@@ -29,10 +29,11 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	cuda_test();
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
-	std::cout << "agents: " <<agents.size();
+	
 	int size = agents.size();
-
+	
 	X = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
+
 	Y = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
 	
 	int i = 0;
@@ -55,20 +56,14 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	destXNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
 	destYNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);	
 	destRNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
-	int j = 0;
 		
 	for(int i = 0; i < (size + size % 4); i++) {
-		destX[i] = (float)destinations[i%destSize]->getx();
-		destXNext[i] = agents[i]->destination->getx();
-		destY[i] = (float)destinations[i%destSize]->gety();
-		destYNext[i] = agents[i]->destination->gety();
 		
-		destR[i] = (float)destinations[i%destSize]->getr();
-		destRNext[i] = agents[i]->destination->getr();
-		j++;
-		
+		destX[i] = destXNext[i] = (float)destinations[i%destSize]->getx();
+		destY[i] = destYNext[i] = (float)destinations[i%destSize]->gety();
+		destR[i] = destRNext[i] = (float)destinations[i%destSize]->getr();
 	}
-
+	
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
 
