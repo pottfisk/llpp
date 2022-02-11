@@ -32,6 +32,7 @@
 int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
 	int i = 1;
+	int threads = -1;
 	QString scenefile = "scenario.xml";
 	Ped::IMPLEMENTATION impl = Ped::SEQ;
 	// Argument handling
@@ -67,6 +68,11 @@ int main(int argc, char*argv[]) {
 			  {
 			    impl = Ped::VECTOR;
 			  }
+			else if (strcmp(&argv[i][2], "threads") == 0)
+			  {
+				threads = atoi(argv[++i]);
+				cout << "threads:"<<threads<<"\n";
+			  }
 			else
 			{
 				cerr << "Unrecognized command: \"" << argv[i] << "\". Ignoring ..." << endl;
@@ -79,13 +85,17 @@ int main(int argc, char*argv[]) {
 
 		i += 1;
 	}
+	if (threads == -1){
+		cout<<"no --threads found, defaulting to 8 threads \n";
+		threads = 8;
+	}
 	int retval = 0;
 	{ // This scope is for the purpose of removing false memory leak positives
 
 		// Reading the scenario file and setting up the crowd simulation model
 		Ped::Model model;
 		ParseScenario parser(scenefile);
-		model.setup(parser.getAgents(), parser.getWaypoints(), impl);
+		model.setup(parser.getAgents(), parser.getWaypoints(), impl, threads);
 
 		// GUI related set ups
 		QApplication app(argc, argv);
@@ -107,7 +117,8 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+				// We override --threads in timing mode
+				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ, 1);
 				PedSimulation simulation(model, mainwindow);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running reference version...\n";
@@ -124,7 +135,7 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
+				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test, threads);
 				PedSimulation simulation(model, mainwindow);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running target version...\n";
@@ -132,7 +143,7 @@ int main(int argc, char*argv[]) {
 				simulation.runSimulationWithoutQt(maxNumberOfStepsToSimulate);
 				auto duration_target = std::chrono::duration_cast<std::chrono::milliseconds> (std::chrono::steady_clock::now() - start);
 				fps_target = ((float)simulation.getTickCount()) / ((float)duration_target.count())*1000.0;
-				cout << "Target time: " << duration_target.count() << " milliseconds, " << fps_target << " Frames Per Second." << std::endl;
+				cout << "Target time: " << duration_target.count() << " milliseconds, " << fps_target << " Frames Per Second." << "With threads: "<< threads << std::endl;
 			}
 			std::cout << "\n\nSpeedup: " << fps_target / fps_seq << std::endl;
 			
