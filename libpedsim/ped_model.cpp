@@ -36,14 +36,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	Y = (float *) _mm_malloc((size + size % 4) * sizeof(float), 16);
 	
-	int i = 0;
-	for(auto agent : agents) {
-		X[i] = (float)agent->getX();
-		Y[i] = (float)agent->getY();
-		agent->destination = agent->waypoints.front();
-		agent->waypoints.pop_front();
-		i++;
-	}
+	
 	
 	// Set up destinations
 	
@@ -56,12 +49,26 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	destXNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
 	destYNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);	
 	destRNext = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
-		
+	int i = 0;
+	for(auto agent : agents) {
+	  X[i] = (float)agent->getX();
+	  Y[i] = (float)agent->getY();
+	  agent->destination = agent->waypoints.front();
+	  agent->waypoints.pop_front();
+	  destX[i] = agent->destination->getx();
+	  destY[i] = agent->destination->gety();
+	  destR[i] = agent->destination->getr();
+ 
+	  destXNext[i] = agent->waypoints.front()->getx();
+	  destYNext[i] = agent->waypoints.front()->gety();
+	  destRNext[i] = agent->waypoints.front()->getr();
+	  i++;
+	}
+
 	for(int i = 0; i < (size + size % 4); i++) {
 		
-		destX[i] = destXNext[i] = (float)destinations[i%destSize]->getx();
-		destY[i] = destYNext[i] = (float)destinations[i%destSize]->gety();
-		destR[i] = destRNext[i] = (float)destinations[i%destSize]->getr();
+
+
 	}
 	
 	// Sets the chosen implemenation. Standard in the given code is SEQ
@@ -126,10 +133,10 @@ void Ped::Model::tick()
      }
    }
    else if(this->implementation == Ped::VECTOR){
-	   __m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
+     	   __m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
 	   __m128 zeros = _mm_setzero_ps();
 	   __m128 ones = _mm_set1_ps(1);
-
+	   #pragma omp paralell for
 	   for (int i = 0; i < agents.size(); i+=4)
 	   {	
 
@@ -144,11 +151,7 @@ void Ped::Model::tick()
 		        
 		       
 			len = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(Xd, Xd),_mm_mul_ps(Yd, Yd)));
-			// If mask==1 len < rad
 			mask_rad = _mm_cmplt_ps(len,Rd);
-			//cout << "-----------\n";
-			//print128_num(mask_rad);
-			//print128_num(len);			
 			mask_zero = _mm_cmpeq_ps(len,zeros);
 			corr = _mm_blendv_ps(zeros,ones,mask_zero);
 			len = _mm_add_ps(len,corr);
@@ -158,21 +161,19 @@ void Ped::Model::tick()
 			Xd = _mm_add_ps(Xd,Xs);
 			Yd = _mm_add_ps(Yd,Ys);
 			
-		    							//mask!=1,mask==1,mask	
 				
 			Xn = _mm_blendv_ps(Xd,Xs,mask_rad);
 			Yn = _mm_blendv_ps(Yd,Ys,mask_rad);
 
-			Xn = _mm_round_ps(Xn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
-			Yn = _mm_round_ps(Yn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+			//		Xn = _mm_round_ps(Xn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+			//Yn = _mm_round_ps(Yn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
 			_mm_store_ps(&X[i], Xn);
 			_mm_store_ps(&Y[i], Yn);
 			
 
 			Xnd = _mm_load_ps(&destXNext[i]);	
 			Ynd = _mm_load_ps(&destYNext[i]);
-			//print128_num(Xds);
-			//print128_num(Xnd);
+
 			Xn = _mm_blendv_ps(Xds,Xnd,mask_rad);
 			Yn = _mm_blendv_ps(Yds,Ynd,mask_rad);
 			
@@ -185,11 +186,10 @@ void Ped::Model::tick()
 		   agent->setX((int)round(X[j]));
 		   agent->setY((int)round(Y[j]));
 		   if(destX[j] == destXNext[j] && destY[j] == destYNext[j]){
-			Twaypoint *dest = agent->destination;
+		     	Twaypoint *dest = agent->destination;
 			agent->waypoints.push_back(dest);
 			agent->destination = dest = agent->waypoints.front();
 			agent->waypoints.pop_front();
-			//cout << "dest :" << dest->getx() << "\n";
 			destYNext[j] = dest->gety();
 			destXNext[j] = dest->getx();
 			destRNext[j] = dest->getr();			
