@@ -101,7 +101,7 @@ void Ped::Model::tick()
     }
   else if(this->implementation == Ped::OMP){
     int i;
-#pragma omp parallel for private(i)
+#pragma omp parallel for num_threads(this->threads)
     for (i = 0; i < agents.size(); i++){
       agents[i]->computeNextDesiredPosition();
       agents[i]->setX(agents[i]->getDesiredX());
@@ -110,7 +110,7 @@ void Ped::Model::tick()
   }
   else if(this->implementation == Ped::PTHREAD){
   
-     int num_threads = 1;
+    int num_threads = this->threads;
      if(num_threads > agents.size()){
        num_threads = agents.size();
      }
@@ -132,7 +132,7 @@ void Ped::Model::tick()
 	   __m128 zeros = _mm_setzero_ps();
 	   __m128 ones = _mm_set1_ps(1);
 	   
-	   #pragma omp parallel for num_threads(this->threads)
+	   //#pragma omp parallel for num_threads(this->threads)
 	   for (int i = 0; i < agents.size(); i+=4)
 	   {	
 		   __m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
