@@ -161,8 +161,8 @@ void Ped::Model::tick()
 			Xn = _mm_blendv_ps(Xd,Xs,mask_rad);
 			Yn = _mm_blendv_ps(Yd,Ys,mask_rad);
 
-			//		Xn = _mm_round_ps(Xn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
-			//Yn = _mm_round_ps(Yn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+			Xn = _mm_round_ps(Xn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+			Yn = _mm_round_ps(Yn, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
 			_mm_store_ps(&X[i], Xn);
 			_mm_store_ps(&Y[i], Yn);
 			
