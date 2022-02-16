@@ -63,6 +63,23 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 			destRNext[i] = agent->waypoints.front()->getr();
 			i++;
 		}
+	}else if (implementation == Ped::MOVE){
+		maxX = std::numeric_limits<int>::min();
+		minX = std::numeric_limits<int>::max();
+		for(auto agent : agents){
+			if(agent->getX() < minX){
+				minX = agent->getX();
+			}
+			if(agent->getX() > maxX){
+				maxX = agent->getX();
+			}
+		}
+
+	//	block_size = (maxX - minX) / 4;
+	//	block_1 = minX + block_size;
+	//	block_2 = minX + (block_size * 2);
+	//	block_3 = minX + (block_size * 3);
+	//	block_4 = minX + (block_size * 4);
 	}
 	
 	// Sets the chosen implemenation. Standard in the given code is SEQ
@@ -124,6 +141,45 @@ void Ped::Model::tick()
        threads[i].join();
      }
    }
+	else if(this->implementation == Ped::MOVE){
+		#pragma omp parallel
+		{
+			#pragma omp single
+			{
+				int diff = maxX - minX;
+				int slice = diff / 4;
+				
+				bool borderAgents[agents.size()];
+				for (int j = 0; j < 4; j++)
+				{
+					#pragma omp task
+					{
+						for (int i = 0; i < agents.size(); i++)
+						{
+							if(agents[i]->getX() >= j*slice + minX && agents[i]->getX() <= (j+1)*slice + minX){
+								agents[i]->computeNextDesiredPosition();
+								if(agents[i]->getDesiredX() < j*slice + minX || agents[i]->getDesiredX() > (j+1)*slice + minX){
+									borderAgents[i] = true;
+								}
+								else{
+									borderAgents[i] = false;
+									move(agents[i]);
+								}
+								
+							}
+						}
+					}
+				}
+				#pragma omp taskwait
+				for(int i = 0; i < agents.size(); i++ ){
+					if (borderAgents[i]){
+						move(agents[i]);
+						borderAgents[i] = false;
+					}
+				}
+			}
+		}
+	}
    else if(this->implementation == Ped::VECTOR){
     	//__m128 Xd,Yd, Xs,Ys, len, mask_rad, mask_zero, corr, Rd, Xn, Yn, Xnd, Ynd, Xds, Yds;
 	   __m128 zeros = _mm_setzero_ps();
@@ -164,6 +220,7 @@ void Ped::Model::tick()
 			_mm_store_ps(&Y[i], Yn);
 			
 
+
 			Xnd = _mm_load_ps(&destXNext[i]);	
 			Ynd = _mm_load_ps(&destYNext[i]);
 
@@ -189,26 +246,7 @@ void Ped::Model::tick()
 					}
 				}
 			}
-			
-	   }
-	   /*
-	   int j = 0; 
-	   for (auto agent : agents){
-		   agent->setX((int)round(X[j]));
-		   agent->setY((int)round(Y[j]));
-		   if(destX[j] == destXNext[j] && destY[j] == destYNext[j]){
-		     	Twaypoint *dest = agent->destination;
-			agent->waypoints.push_back(dest);
-			agent->destination = dest = agent->waypoints.front();
-			agent->waypoints.pop_front();
-			destYNext[j] = dest->gety();
-			destXNext[j] = dest->getx();
-			destRNext[j] = dest->getr();			
-	   		}
-		   j++;
-	   }
-	   */
-	   
+	   }	   
    }
 }
 

@@ -22,7 +22,7 @@ namespace Ped{
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
-	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ };
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, MOVE};
 
 	class Model
 	{
@@ -68,6 +68,8 @@ namespace Ped{
 		float *destXNext;
 		float *destYNext;
 		float *destRNext;
+		int maxX;
+		int minX;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
@@ -77,6 +79,8 @@ namespace Ped{
 		////////////
 		/// Everything below here won't be relevant until Assignment 3
 		///////////////////////////////////////////////
+
+		
 
 		// Returns the set of neighboring agents for the specified position
 		set<const Ped::Tagent*> getNeighbors(int x, int y, int dist) const;

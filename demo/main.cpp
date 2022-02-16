@@ -69,6 +69,11 @@ int main(int argc, char*argv[]) {
 			  {
 			    impl = Ped::VECTOR;
 			  }
+			else if (strcmp(&argv[i][2], "move") == 0)
+			  {
+			    impl = Ped::MOVE;
+			  }
+			  
 			else if (strcmp(&argv[i][2], "threads") == 0)
 			  {
 				threads = atoi(argv[++i]);
