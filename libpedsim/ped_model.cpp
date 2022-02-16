@@ -77,8 +77,7 @@ void Ped::Model::thread_func(int val, int work){
   for(int i = 0; i < work; i++){
     int index = val + i;
     agents[index]->computeNextDesiredPosition();
-    agents[index]->setX(agents[index]->getDesiredX());
-    agents[index]->setY(agents[index]->getDesiredY());
+	move(agents[index]);
   }
 }
 
@@ -94,9 +93,8 @@ void Ped::Model::tick()
 {
   if(this->implementation == Ped::SEQ){
       for (auto agent: agents){
-	agent->computeNextDesiredPosition();
-	agent->setX(agent->getDesiredX());
-	agent->setY(agent->getDesiredY());
+		agent->computeNextDesiredPosition();
+		move(agent);
       }
     }
   else if(this->implementation == Ped::OMP){
@@ -104,8 +102,7 @@ void Ped::Model::tick()
 #pragma omp parallel for num_threads(this->threads)
     for (i = 0; i < agents.size(); i++){
       agents[i]->computeNextDesiredPosition();
-      agents[i]->setX(agents[i]->getDesiredX());
-      agents[i]->setY(agents[i]->getDesiredY());
+	  move(agents[i]);
     } 
   }
   else if(this->implementation == Ped::PTHREAD){

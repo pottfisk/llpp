@@ -58,6 +58,7 @@ int main(int argc, char*argv[]) {
 			else if (strcmp(&argv[i][2], "seq") == 0)
 			  {
 			    impl = Ped::SEQ;
+				threads = 1;
 			  }
 
 			else if (strcmp(&argv[i][2], "pthread") == 0)
