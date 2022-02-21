@@ -41,6 +41,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		
 		destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 		int destSize = destinations.size();
+		
 		destX = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
 		destY = (float *)_mm_malloc((size+ size % 4) * sizeof(float),16);
 		destR = (float *)_mm_malloc((size + size % 4) * sizeof(float),16);
@@ -63,8 +64,6 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 			i++;
 		}
 	}else if (implementation == Ped::MOVE){
-		taskNum = 4;
-		
 		maxX = std::numeric_limits<int>::min();
 		minX = std::numeric_limits<int>::max();
 		for(auto agent : agents){
@@ -90,10 +89,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
 }
-bool comp(int a, int b)
-{
-    return (a < b);
-}
+
 void Ped::Model::thread_func(int val, int work){
   for(int i = 0; i < work; i++){
     int index = val + i;
@@ -151,19 +147,16 @@ void Ped::Model::tick()
 			#pragma omp single
 			{
 				int diff = maxX - minX;
-				int slice = diff / taskNum;
+				int slice = diff / 4;
 				
-				bool *borderAgents = (bool *)malloc(sizeof(bool) * agents.size());
-				int *agentsPerTask = (int *) malloc(sizeof(int) * taskNum);
-				for (int j = 0; j < taskNum; j++)
+				bool borderAgents[agents.size()];
+				for (int j = 0; j < 4; j++)
 				{
 					#pragma omp task
 					{
-						int numAgents = 0;
 						for (int i = 0; i < agents.size(); i++)
 						{
 							if(agents[i]->getX() >= j*slice + minX && agents[i]->getX() <= (j+1)*slice + minX){
-								numAgents++;
 								agents[i]->computeNextDesiredPosition();
 								if(agents[i]->getDesiredX() < j*slice + minX || agents[i]->getDesiredX() > (j+1)*slice + minX){
 									borderAgents[i] = true;
@@ -172,22 +165,12 @@ void Ped::Model::tick()
 									borderAgents[i] = false;
 									move(agents[i]);
 								}
+								
 							}
 						}
-						agentsPerTask[j] = numAgents;
 					}
 				}
 				#pragma omp taskwait
-				int maxNum = 0;
-				for (int i = 0; i < taskNum; i++){
-					cout << "Agents: "<< agentsPerTask[i] << "\n";
-
-					if(agentsPerTask[i] > maxNum) maxNum = agentsPerTask[i];
-				}
-				if(maxNum > 2.5	*agents.size()/taskNum) taskNum++;
-				else if (taskNum > 4) taskNum--;
-				cout << taskNum << "\n";
-
 				for(int i = 0; i < agents.size(); i++ ){
 					if (borderAgents[i]){
 						move(agents[i]);

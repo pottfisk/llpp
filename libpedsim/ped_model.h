@@ -70,7 +70,6 @@ namespace Ped{
 		float *destRNext;
 		int maxX;
 		int minX;
-		int taskNum;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
