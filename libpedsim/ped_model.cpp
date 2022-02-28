@@ -248,6 +248,7 @@ void Ped::Model::tick()
 			}
 	   }	   
    }
+   updateHeatmapSeq();
 }
 
 

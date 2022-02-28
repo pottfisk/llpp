@@ -3,6 +3,8 @@
 // Implements the heatmap functionality. 
 //
 #include "ped_model.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -35,6 +37,8 @@ void Ped::Model::setupHeatmapSeq()
 	}
 }
 
+
+
 // Updates the heatmap according to the agent positions
 void Ped::Model::updateHeatmapSeq()
 {
@@ -46,6 +50,8 @@ void Ped::Model::updateHeatmapSeq()
 			heatmap[y][x] = (int)round(heatmap[y][x] * 0.80);
 		}
 	}
+
+
 
 	// Count how many agents want to go to each location
 	for (int i = 0; i < agents.size(); i++)
