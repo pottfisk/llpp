@@ -23,6 +23,8 @@ void Ped::Model::setupHeatmapSeq()
 
 	heatmap = (int**)malloc(SIZE*sizeof(int*));
 
+
+
 	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 
@@ -30,6 +32,9 @@ void Ped::Model::setupHeatmapSeq()
 	{
 		heatmap[i] = hm + SIZE*i;
 	}
+	cudaMalloc(&a_device, sizeof(heatmap));
+	cudaMemcpy(a_device, &heatmap, sizeof(heatmap), cudaMemcpyHostToDevice);
+
 	for (int i = 0; i < SCALED_SIZE; i++)
 	{
 		scaled_heatmap[i] = shm + SCALED_SIZE*i;
@@ -70,6 +75,7 @@ void Ped::Model::updateHeatmapSeq()
 
 	}
 
+	Ped::Model::scale_heatmap(a_device);
 	for (int x = 0; x < SIZE; x++)
 	{
 		for (int y = 0; y < SIZE; y++)

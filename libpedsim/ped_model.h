@@ -39,7 +39,7 @@ namespace Ped{
 
 		// Adds an agent to the tree structure
 		void placeAgent(const Ped::Tagent *a);
-
+		void scale_heatmap(int** a_device);
 		// Cleans up the tree and restructures it. Worth calling every now and then.
 		void cleanup();
 		~Model();
@@ -70,6 +70,7 @@ namespace Ped{
 		float *destRNext;
 		int maxX;
 		int minX;
+		int** a_device;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 

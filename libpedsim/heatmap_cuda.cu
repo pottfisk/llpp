@@ -5,17 +5,20 @@
 #include <stdio.h>
 
 
-__global__ void increase_heat(Ped::Tagent* agents){
-    int id = blockIdx.x*blockDim.x +threadIdx.x;
-    agents[id].getDesiredX();
-    agents[id].getDesiredY();
+__global__ void scale_on_device(int** heatmap, int size){
+    int idx = blockIdx.x*blockDim.x +threadIdx.x;
+    int idy = blockIdx.y*blockDim.y +threadIdx.y;
+    printf("Num: %d %d", idx,idy);
 }
 
-void intensify_heatmap(Ped::Tagent* agents){
-    Ped::Tagent* a_device;
-    cudaMalloc(&a_device, sizeof(agents));
-	cudaMemcpy(a_device, &agents, sizeof(agents), cudaMemcpyHostToDevice);
-	increase_heat<<<1, agents.size()>>>(a_device);
+void Ped::Model::scale_heatmap(int** a_device){
+    dim3 dimBlock(1, 1);
+    dim3 dimGrid(SIZE/dimBlock.y, SIZE/dimBlock.x);
+
+//    Mat<<<dimGrid, dimBlock >>>(d_a, d_b, d_c, n);
+
+
+	scale_on_device<<<dimGrid, dimBlock>>>(a_device,SIZE);
 
 }
 
