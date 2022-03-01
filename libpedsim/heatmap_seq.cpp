@@ -17,29 +17,38 @@ using namespace std;
 // Sets up the heatmap
 void Ped::Model::setupHeatmapSeq()
 {
-	int *hm = (int*)calloc(SIZE*SIZE, sizeof(int));
-	int *shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+        int *hm; 
 	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
-
+	int *shm;
+	cout << "In setup \n";
+	cudaMalloc(&hm,SIZE*SIZE*sizeof(int));
+	cudaMemset(&hm,0,SIZE*SIZE*sizeof(int));
+        cudaMalloc(&shm,SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	cudaMalloc(&list_device, SIZE*SIZE*sizeof(int));
 	heatmap = (int**)malloc(SIZE*sizeof(int*));
+	cudaMalloc(&heatmap_device, SIZE*sizeof(int *));
 
 
 
 	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	
+	device_setup_host(hm,shm);
 
-	for (int i = 0; i < SIZE; i++)
-	{
-		heatmap[i] = hm + SIZE*i;
-	}
-	cudaMalloc(&a_device, sizeof(heatmap));
-	cudaMemcpy(a_device, &heatmap, sizeof(heatmap), cudaMemcpyHostToDevice);
+	cout << "In setup 2\n";	
+	//cudaMemcpy(heatmap_device, heatmap, sizeof(heatmap), cudaMemcpyHostToDevice);
 
+	
 	for (int i = 0; i < SCALED_SIZE; i++)
 	{
-		scaled_heatmap[i] = shm + SCALED_SIZE*i;
+	  //	scaled_heatmap[i] = shm + SCALED_SIZE*i;
 		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+		
 	}
+	cudaMalloc(&scaled_heatmap_device, sizeof(scaled_heatmap));
+	//	cudaMemcpy(scaled_heatmap_device, scaled_heatmap, sizeof(scaled_heatmap), cudaMemcpyHostToDevice);
+
+
 }
 
 
@@ -47,15 +56,16 @@ void Ped::Model::setupHeatmapSeq()
 // Updates the heatmap according to the agent positions
 void Ped::Model::updateHeatmapSeq()
 {
-	for (int x = 0; x < SIZE; x++)
-	{
-		for (int y = 0; y < SIZE; y++)
-		{
-			// heat fades
-			heatmap[y][x] = (int)round(heatmap[y][x] * 0.80);
-		}
-	}
 
+  int list[SIZE*SIZE] = {};
+	// for (int x = 0; x < SIZE; x++)
+	// {
+	// 	for (int y = 0; y < SIZE; y++)
+	// 	{
+	// 		// heat fades
+	// 		heatmap[y][x] = (int)round(heatmap[y][x] * 0.80);
+	// 	}
+	// }
 
 
 	// Count how many agents want to go to each location
@@ -71,34 +81,38 @@ void Ped::Model::updateHeatmapSeq()
 		}
 
 		// intensify heat for better color results
-		heatmap[y][x] += 40;
-
+		list[y*SIZE + x] += 1;
 	}
-
-	Ped::Model::scale_heatmap(a_device);
+		
+cudaMemcpy(list_device, list, sizeof(list), cudaMemcpyHostToDevice);	
+	Ped::Model::scale_heatmap();
+	cout << "after scale\n";
+	cudaMemcpy(scaled_heatmap, scaled_heatmap_device, sizeof(scaled_heatmap), cudaMemcpyDeviceToHost);
+	cout << "after copy \n";
 	for (int x = 0; x < SIZE; x++)
 	{
 		for (int y = 0; y < SIZE; y++)
 		{
-			heatmap[y][x] = heatmap[y][x] < 255 ? heatmap[y][x] : 255;
+		  //			heatmap[y][x] = heatmap[y][x] < 255 ? heatmap[y][x] : 255;
+		  //cout << "Scale: " << scaled_heatmap[y][x] << "\n";
 		}
 	}
 
-	// Scale the data for visual representation
-	for (int y = 0; y < SIZE; y++)
-	{
-		for (int x = 0; x < SIZE; x++)
-		{
-			int value = heatmap[y][x];
-			for (int cellY = 0; cellY < CELLSIZE; cellY++)
-			{
-				for (int cellX = 0; cellX < CELLSIZE; cellX++)
-				{
-					scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
-				}
-			}
-		}
-	}
+	// //Scale the data for visual representation
+	// for (int y = 0; y < SIZE; y++)
+	// {
+	// 	for (int x = 0; x < SIZE; x++)
+	// 	{
+	// 		int value = heatmap[y][x];
+	// 		for (int cellY = 0; cellY < CELLSIZE; cellY++)
+	// 		{
+	// 			for (int cellX = 0; cellX < CELLSIZE; cellX++)
+	// 			{
+	// 				scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// Weights for blur filter
 	const int w[5][5] = {
@@ -120,7 +134,9 @@ void Ped::Model::updateHeatmapSeq()
 			{
 				for (int l = -2; l < 3; l++)
 				{
+				  cout << "In blur loop \n";
 					sum += w[2 + k][2 + l] * scaled_heatmap[i + k][j + l];
+
 				}
 			}
 			int value = sum / WEIGHTSUM;

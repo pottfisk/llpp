@@ -36,10 +36,10 @@ namespace Ped{
 		void thread_func(int val,int work);
 		// Returns the agents of this scenario
 		const std::vector<Tagent*> getAgents() const { return agents; };
-
+		void device_setup_host(int* hm,int*shm);
 		// Adds an agent to the tree structure
 		void placeAgent(const Ped::Tagent *a);
-		void scale_heatmap(int** a_device);
+		void scale_heatmap();
 		// Cleans up the tree and restructures it. Worth calling every now and then.
 		void cleanup();
 		~Model();
@@ -70,7 +70,9 @@ namespace Ped{
 		float *destRNext;
 		int maxX;
 		int minX;
-		int** a_device;
+		int** heatmap_device;
+		int** scaled_heatmap_device;
+		int* list_device;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
 
