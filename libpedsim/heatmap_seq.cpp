@@ -61,13 +61,11 @@ void Ped::Model::updateHeatmapSeq()
 	// for (int x = 0; x < SIZE; x++)
 	// {
 	// 	for (int y = 0; y < SIZE; y++)
-	// 	{
+	// 	{shm + scaledshm + scaled
 	// 		// heat fades
 	// 		heatmap[y][x] = (int)round(heatmap[y][x] * 0.80);
 	// 	}
 	// }
-
-
 	// Count how many agents want to go to each location
 	for (int i = 0; i < agents.size(); i++)
 	{
@@ -83,15 +81,10 @@ void Ped::Model::updateHeatmapSeq()
 	}
 	cudaMemcpy(list_device, list, SIZE*SIZE*sizeof(int), cudaMemcpyHostToDevice);
 	Ped::Model::scale_heatmap();
-	cudaError_t status = cudaMemcpy((void *)blurred_heatmap_linear, (void *)blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
-	cudaError_t cudastatus=cudaDeviceSynchronize();
-	for (int i = 0; i < SCALED_SIZE; i++)
-	{
-		// if(blurred_heatmap_linear[i]){
-		// 	cout << "Blurred " << blurred_heatmap_linear[i] << "\n";
-		// }
-		blurred_heatmap[i] = blurred_heatmap_linear + i*SCALED_SIZE;
-	}
+	//cudaMemcpy((void *)blurred_heatmap_linear, (void *)blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+	//for (int i = 0; i < SCALED_SIZE; i++){
+	//	blurred_heatmap[i] = blurred_heatmap_linear + i*SCALED_SIZE;
+	//}
 
 
 	// //Scale the data for visual representation

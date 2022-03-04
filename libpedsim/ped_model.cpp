@@ -13,6 +13,7 @@
 #include <stack>
 #include <algorithm>
 #include "cuda_testkernel.h"
+#include "cuda_runtime.h"
 #include <omp.h>
 #include <thread>
 #include <emmintrin.h>
@@ -109,18 +110,32 @@ void print128_num(__m128 var)
 void Ped::Model::tick()
 {
   if(this->implementation == Ped::SEQ){
-      for (auto agent: agents){
+	for (auto agent: agents){
 		agent->computeNextDesiredPosition();
+	}
+	updateHeatmapSeq();
+	for (auto agent: agents){
 		move(agent);
-      }
-    }
+	}
+	cudaMemcpy((void *)blurred_heatmap_linear, (void *)blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < SCALED_SIZE; i++){
+		blurred_heatmap[i] = blurred_heatmap_linear + i*SCALED_SIZE;
+	}
+	}
   else if(this->implementation == Ped::OMP){
     int i;
 #pragma omp parallel for num_threads(this->threads)
     for (i = 0; i < agents.size(); i++){
       agents[i]->computeNextDesiredPosition();
-	  move(agents[i]);
     } 
+	updateHeatmapSeq();
+	for (auto agent: agents){
+		move(agent);
+	}
+	cudaMemcpy((void *)blurred_heatmap_linear, (void *)blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < SCALED_SIZE; i++){
+		blurred_heatmap[i] = blurred_heatmap_linear + i*SCALED_SIZE;
+	}
   }
   else if(this->implementation == Ped::PTHREAD){
   
@@ -248,7 +263,7 @@ void Ped::Model::tick()
 			}
 	   }	   
    }
-  updateHeatmapSeq();
+  //updateHeatmapSeq();
 }
 
 

@@ -18,14 +18,20 @@ __global__ void device_setup(int** heatmap_device, int* hm, int** scaled_heatmap
 }
 
 __global__ void scale_on_device(int** heatmap, int** scaled_heatmap, int* blurred_heatmap, int* list, int size,int cellsize,int scaled_size){
-    int idx = blockIdx.x*blockDim.x +threadIdx.x;
-    int idy = blockIdx.y*blockDim.y +threadIdx.y;
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    int idy = blockIdx.y*blockDim.y + threadIdx.y;
+    int blockY = blockIdx.y*blockDim.y;
+    
+    __shared__ int shared_heatmap[16][16];
+    shared_heatmap[threadIdx.y][threadIdx.x] =  heatmap[idy][idx];
 
-    heatmap[idy][idx] = (int)round(heatmap[idy][idx] * 0.80);
-    heatmap[idy][idx] += list[idy*size + idx]*40;
+    shared_heatmap[threadIdx.y][threadIdx.x] = (int)round(shared_heatmap[threadIdx.y][threadIdx.x] * 0.80);
+    shared_heatmap[threadIdx.y][threadIdx.x] += list[idy*size + idx]*40;
 
-    heatmap[idy][idx] = heatmap[idy][idx] < 255 ? heatmap[idy][idx] : 255;
-    int value = heatmap[idy][idx];
+    shared_heatmap[threadIdx.y][threadIdx.x] = shared_heatmap[threadIdx.y][threadIdx.x] < 255 ? shared_heatmap[threadIdx.y][threadIdx.x] : 255;
+    int value = shared_heatmap[threadIdx.y][threadIdx.x];
+    __syncthreads();
+    heatmap[idy][idx] = shared_heatmap[threadIdx.y][threadIdx.x];
     for (int cellY = 0; cellY < cellsize; cellY++)
     {
     	for (int cellX = 0; cellX < cellsize; cellX++)
