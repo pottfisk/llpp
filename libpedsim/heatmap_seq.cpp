@@ -18,20 +18,21 @@ using namespace std;
 void Ped::Model::setupHeatmapSeq()
 {
         int *hm; 
-	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	int *bhm;
 	int *shm;
 	cout << "In setup \n";
 	cudaMalloc(&hm,SIZE*SIZE*sizeof(int));
 	cudaMemset(&hm,0,SIZE*SIZE*sizeof(int));
-        cudaMalloc(&shm,SCALED_SIZE*SCALED_SIZE*sizeof(int));
+    cudaMalloc(&shm,SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	cudaMalloc(&bhm, SCALED_SIZE*SCALED_SIZE*sizeof(int));
 	cudaMalloc(&list_device, SIZE*SIZE*sizeof(int));
 	heatmap = (int**)malloc(SIZE*sizeof(int*));
 	cudaMalloc(&heatmap_device, SIZE*sizeof(int *));
+	cudaMalloc(&scaled_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int));
+	cudaMalloc(&blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int));
 
-
-
-	scaled_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
 	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	blurred_heatmap_linear = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
 	
 	device_setup_host(hm,shm);
 
@@ -39,13 +40,12 @@ void Ped::Model::setupHeatmapSeq()
 	//cudaMemcpy(heatmap_device, heatmap, sizeof(heatmap), cudaMemcpyHostToDevice);
 
 	
-	for (int i = 0; i < SCALED_SIZE; i++)
-	{
-	  //	scaled_heatmap[i] = shm + SCALED_SIZE*i;
-		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+	// for (int i = 0; i < SCALED_SIZE; i++)
+	// {
+	//   //	scaled_heatmap[i] = shm + SCALED_SIZE*i;
+	// 	//blurred_heatmap[i] = bhm + SCALED_SIZE*i;
 		
-	}
-	cudaMalloc(&scaled_heatmap_device, sizeof(scaled_heatmap));
+	// }
 	//	cudaMemcpy(scaled_heatmap_device, scaled_heatmap, sizeof(scaled_heatmap), cudaMemcpyHostToDevice);
 
 
@@ -79,70 +79,60 @@ void Ped::Model::updateHeatmapSeq()
 		{
 			continue;
 		}
-
-		// intensify heat for better color results
 		list[y*SIZE + x] += 1;
 	}
-		
-cudaMemcpy(list_device, list, sizeof(list), cudaMemcpyHostToDevice);	
+	cudaMemcpy(list_device, list, SIZE*SIZE*sizeof(int), cudaMemcpyHostToDevice);
 	Ped::Model::scale_heatmap();
-	cout << "after scale\n";
-	cudaMemcpy(scaled_heatmap, scaled_heatmap_device, sizeof(scaled_heatmap), cudaMemcpyDeviceToHost);
-	cout << "after copy \n";
-	for (int x = 0; x < SIZE; x++)
+	cudaError_t status = cudaMemcpy((void *)blurred_heatmap_linear, (void *)blurred_heatmap_device, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaError_t cudastatus=cudaDeviceSynchronize();
+	for (int i = 0; i < SCALED_SIZE; i++)
 	{
-		for (int y = 0; y < SIZE; y++)
-		{
-		  //			heatmap[y][x] = heatmap[y][x] < 255 ? heatmap[y][x] : 255;
-		  //cout << "Scale: " << scaled_heatmap[y][x] << "\n";
-		}
+		// if(blurred_heatmap_linear[i]){
+		// 	cout << "Blurred " << blurred_heatmap_linear[i] << "\n";
+		// }
+		blurred_heatmap[i] = blurred_heatmap_linear + i*SCALED_SIZE;
 	}
 
+
 	// //Scale the data for visual representation
-	// for (int y = 0; y < SIZE; y++)
+	// for (int y = 0; y < SCALED_SIZE; y++)
 	// {
-	// 	for (int x = 0; x < SIZE; x++)
-	// 	{
-	// 		int value = heatmap[y][x];
-	// 		for (int cellY = 0; cellY < CELLSIZE; cellY++)
-	// 		{
-	// 			for (int cellX = 0; cellX < CELLSIZE; cellX++)
-	// 			{
-	// 				scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
-	// 			}
-	// 		}
+	// 	for (int x = 0; x < SCALED_SIZE; x++)
+	// 	{	
+	// 		//if(blurred_heatmap[y][x] != 0){
+	// 		cout << "BLURRED HOST: " << blurred_heatmap[y][x] << "\n";
+	// 		//}
 	// 	}
 	// }
 
 	// Weights for blur filter
-	const int w[5][5] = {
-		{ 1, 4, 7, 4, 1 },
-		{ 4, 16, 26, 16, 4 },
-		{ 7, 26, 41, 26, 7 },
-		{ 4, 16, 26, 16, 4 },
-		{ 1, 4, 7, 4, 1 }
-	};
+	//const int w[5][5] = {
+	//	{ 1, 4, 7, 4, 1 },
+	//	{ 4, 16, 26, 16, 4 },
+	//	{ 7, 26, 41, 26, 7 },
+	//	{ 4, 16, 26, 16, 4 },
+	//	{ 1, 4, 7, 4, 1 }
+	//};
 
-#define WEIGHTSUM 273
-	// Apply gaussian blurfilter		       
-	for (int i = 2; i < SCALED_SIZE - 2; i++)
-	{
-		for (int j = 2; j < SCALED_SIZE - 2; j++)
-		{
-			int sum = 0;
-			for (int k = -2; k < 3; k++)
-			{
-				for (int l = -2; l < 3; l++)
-				{
-				  cout << "In blur loop \n";
-					sum += w[2 + k][2 + l] * scaled_heatmap[i + k][j + l];
+// #define WEIGHTSUM 273
+// 	// Apply gaussian blurfilter		       
+// 	for (int i = 2; i < SCALED_SIZE - 2; i++)
+// 	{
+// 		for (int j = 2; j < SCALED_SIZE - 2; j++)
+// 		{
+// 			int sum = 0;
+// 			for (int k = -2; k < 3; k++)
+// 			{
+// 				for (int l = -2; l < 3; l++)
+// 				{
+// 					sum += w[2 + k][2 + l] * scaled_heatmap[i + k][j + l];
 
-				}
-			}
-			int value = sum / WEIGHTSUM;
-			blurred_heatmap[i][j] = 0x00FF0000 | value << 24;
-		}
-	}
+// 				}
+// 			}
+// 			int value = sum / WEIGHTSUM;
+// 			blurred_heatmap[i][j] = 0x00FF0000 | value << 24;
+// 		}
+// 	}
 }
 
 int Ped::Model::getHeatmapSize() const {

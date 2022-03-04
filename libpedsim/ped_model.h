@@ -72,6 +72,7 @@ namespace Ped{
 		int minX;
 		int** heatmap_device;
 		int** scaled_heatmap_device;
+		int* blurred_heatmap_device;
 		int* list_device;
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
@@ -104,7 +105,7 @@ namespace Ped{
 
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
-
+		int * blurred_heatmap_linear;
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
 	};
